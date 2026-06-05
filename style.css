@@ -1,0 +1,88 @@
+/* 全局重置，确保画布占满全屏且没有滚动条 */
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #050510; /* 午夜蓝背景 */
+    font-family: 'Helvetica Neue', sans-serif;
+}
+
+/* 之前提供的进度条样式 */
+#loading-overlay {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    pointer-events: none; 
+    color: #b76e79; 
+    text-align: center;
+    z-index: 10;
+}
+.loading-text {
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+.progress-bar-container {
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+}
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background: #b76e79;
+    transition: width 0.3s ease;
+}
+/* 高级感按钮基础样式 */
+.premium-btn {
+    background: rgba(183, 110, 121, 0.15); /* 玫瑰金透明底 */
+    border: 1px solid rgba(183, 110, 121, 0.5); /* 玫瑰金边框 */
+    color: #ffd1dc;
+    font-family: 'Helvetica Neue', sans-serif;
+    letter-spacing: 2px;
+    padding: 12px 24px;
+    border-radius: 30px;
+    cursor: pointer;
+    backdrop-filter: blur(10px); /* 磨砂玻璃质感 */
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+.premium-btn:hover {
+    background: rgba(183, 110, 121, 0.4);
+    box-shadow: 0 0 15px rgba(183, 110, 121, 0.5);
+    transform: translateY(-2px);
+}
+.premium-btn:active {
+    transform: translateY(1px);
+}
+
+/* 按钮定位 */
+.floating-btn {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
+#gallery-ui {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    transition: opacity 0.5s ease;
+}
+.nav-btn {
+    font-size: 18px;
+    padding: 8px 18px;
+    border-radius: 50%;
+}
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+}

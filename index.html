@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our 3D Memories</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="loading-text">RECOVERING MEMORIES <span id="progress-text">0/34</span></div>
+        <div class="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+    </div>
+
+    <video id="input_video" style="display:none;"></video>
+<div id="gallery-ui" class="hidden">
+    <button id="btn-prev" class="premium-btn nav-btn">⟵</button>
+    <button id="btn-exit" class="premium-btn">返回爱心</button>
+    <button id="btn-next" class="premium-btn nav-btn">⟶</button>
+</div>
+<button id="btn-enter-gallery" class="premium-btn floating-btn">浏览回忆</button>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
