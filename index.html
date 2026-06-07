@@ -21,6 +21,17 @@
     </script>
 </head>
 <body>
+    <!-- 开场覆盖层 -->
+    <div id="intro-overlay">
+        <div class="intro-stars"></div>
+        <div class="intro-content">
+            <div class="intro-subtitle">✨ FOR MY LOVE ✨</div>
+            <div class="intro-title">我们的<br>回忆相册</div>
+            <div class="intro-divider"></div>
+            <button id="btn-start" class="premium-btn intro-btn">准备好了，打开礼物</button>
+        </div>
+    </div>
+
     <div id="loading-overlay">
         <div class="loading-text">RECOVERING MEMORIES <span id="progress-text">0/34</span></div>
         <div class="progress-bar-container">
@@ -29,12 +40,41 @@
     </div>
 
     <video id="input_video" style="display:none;"></video>
-<div id="gallery-ui" class="hidden">
-    <button id="btn-prev" class="premium-btn nav-btn">⟵</button>
-    <button id="btn-exit" class="premium-btn">返回爱心</button>
-    <button id="btn-next" class="premium-btn nav-btn">⟶</button>
-</div>
-<button id="btn-enter-gallery" class="premium-btn floating-btn">浏览回忆</button>
+    <div id="camera-heart" class="camera-heart">
+        <video id="camera-preview" autoplay playsinline></video>
+    </div>
+
+    <!-- 纪念日倒计时 -->
+    <div id="days-counter">
+        <span id="days-number">0</span>
+        <span id="days-label">DAYS</span>
+    </div>
+
+    <!-- 音乐控制 -->
+    <button id="btn-music" class="premium-btn music-btn" title="播放/暂停音乐">♪</button>
+    <audio id="bg-music" loop preload="auto"></audio>
+
+    <!-- 照片备注 -->
+    <div id="photo-caption" class="hidden"></div>
+
+    <div id="gallery-ui" class="hidden">
+        <button id="btn-prev" class="premium-btn nav-btn">⟵</button>
+        <button id="btn-exit" class="premium-btn">返回爱心</button>
+        <button id="btn-next" class="premium-btn nav-btn">⟶</button>
+    </div>
+    <button id="btn-enter-gallery" class="premium-btn floating-btn">浏览回忆</button>
+
+    <!-- 手势提示 -->
+    <div id="gesture-hint">
+        <span class="gesture-icon">🖐️</span>
+        <span class="gesture-text">张开手掌，引爆回忆</span>
+    </div>
+
+    <!-- 握拳收回提示 -->
+    <div id="fist-hint">
+        <span class="gesture-icon">👊</span>
+        <span class="gesture-text">握紧拳头，重聚爱心</span>
+    </div>
     <script type="module" src="main.js"></script>
 </body>
 </html>
