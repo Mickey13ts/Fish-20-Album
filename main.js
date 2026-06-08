@@ -22,7 +22,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0; 
+renderer.toneMappingExposure = 0.55; 
 document.body.appendChild(renderer.domElement);
 
 // 后处理 - Bloom 发光
@@ -32,9 +32,9 @@ composer.addPass(renderPass);
 
 const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.5,   // strength - 发光强度
+    0.35,  // strength - 发光强度
     0.35,  // radius - 发光半径
-    0.6    // threshold - 亮度阈值（降低让更多元素发光）
+    0.7    // threshold - 亮度阈值（提高减少发光范围）
 );
 composer.addPass(bloomPass);
 
@@ -473,9 +473,48 @@ const cameraPreview = document.getElementById('camera-preview');
 const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
 hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
+// 浏览模式下单手挥动切换的防抖
+let gallerySwipeCooldown = false;
+let lastSwipeHandX = null;
+let swipeAccumulator = 0; // 累积挥动距离
+
 hands.onResults((results) => {
-    // 浏览回忆模式下完全禁用手势控制
-    if (currentState === 'GALLERY') return;
+    // 浏览回忆模式：单手挥动切换照片
+    if (currentState === 'GALLERY') {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && !gallerySwipeCooldown) {
+            const wrist = results.multiHandLandmarks[0][0];
+            const handX = wrist.x;
+            
+            if (lastSwipeHandX !== null) {
+                const delta = handX - lastSwipeHandX;
+                swipeAccumulator += delta;
+                
+                // 累积超过阈值就切换（摄像头镜像：用户左挥 = 画面右移 → 后翻一张）
+                if (swipeAccumulator > 0.12) {
+                    // 用户左挥 → 后翻一张（下一张）
+                    if (currentGalleryIndex < totalPhotos - 1) {
+                        currentGalleryIndex++;
+                        updatePhotoCaption();
+                        setSwipeCooldown();
+                    }
+                    swipeAccumulator = 0;
+                } else if (swipeAccumulator < -0.12) {
+                    // 用户右挥 → 前翻一张（上一张）
+                    if (currentGalleryIndex > 0) {
+                        currentGalleryIndex--;
+                        updatePhotoCaption();
+                        setSwipeCooldown();
+                    }
+                    swipeAccumulator = 0;
+                }
+            }
+            lastSwipeHandX = handX;
+        } else {
+            lastSwipeHandX = null;
+            swipeAccumulator = 0;
+        }
+        return;
+    }
 
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
@@ -554,7 +593,7 @@ function animate() {
     topWarmLight.intensity = 3 + Math.sin(elapsedTime * 2.2 + 2) * 1.5;
 
     // 调整 Bloom 强度随心跳变化
-    bloomPass.strength = 0.6 + Math.sin(elapsedTime * 2.5) * 0.15;
+    bloomPass.strength = 0.4 + Math.sin(elapsedTime * 2.5) * 0.1;
     
     stardust.rotation.y = elapsedTime * 0.04;
     stardust.rotation.x = Math.sin(elapsedTime * 0.2) * 0.1;
@@ -732,6 +771,14 @@ const btnNext = document.getElementById('btn-next');
 const btnExit = document.getElementById('btn-exit');
 const photoCaption = document.getElementById('photo-caption');
 
+// 浏览模式挥手切换防抖
+function setSwipeCooldown() {
+    gallerySwipeCooldown = true;
+    setTimeout(() => {
+        gallerySwipeCooldown = false;
+    }, 800);
+}
+
 // 更新照片备注显示
 function updatePhotoCaption() {
     if (!photoCaption) return;
@@ -749,13 +796,12 @@ function updatePhotoCaption() {
 }
 
 if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
+    const gallerySwipeHint = document.getElementById('gallery-swipe-hint');
+    
     btnEnter.addEventListener('click', () => {
         currentState = 'GALLERY';
         currentGalleryIndex = 0; 
         updatePhotoCaption();
-        // 隐藏摄像头爱心窗口
-        const cameraHeart = document.getElementById('camera-heart');
-        if (cameraHeart) cameraHeart.classList.remove('visible');
         // 重置相机到正中心，消除手势偏移
         targetCameraPos.set(0, 0, 35);
         camera.position.set(0, 0, 35);
@@ -775,17 +821,29 @@ if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
         });
         btnEnter.classList.add('hidden');
         galleryUI.classList.remove('hidden');
+        // 显示手势提示，5秒后自动淡出
+        if (gallerySwipeHint) {
+            gallerySwipeHint.classList.remove('hidden');
+            gallerySwipeHint.classList.remove('fade-out');
+            setTimeout(() => {
+                if (currentState === 'GALLERY') {
+                    gallerySwipeHint.classList.add('fade-out');
+                }
+            }, 5000);
+        }
     });
 
     btnExit.addEventListener('click', () => {
         currentState = 'HEART';
         updatePhotoCaption();
-        // 显示摄像头爱心窗口
-        const cameraHeart = document.getElementById('camera-heart');
-        if (cameraHeart) cameraHeart.classList.add('visible');
         targetCameraPos.set(0, 0, 35); // 重置相机位置
         btnEnter.classList.remove('hidden');
         galleryUI.classList.add('hidden');
+        // 隐藏双手手势提示
+        if (gallerySwipeHint) {
+            gallerySwipeHint.classList.add('hidden');
+            gallerySwipeHint.classList.remove('fade-out');
+        }
     });
 
     btnNext.addEventListener('click', () => {
