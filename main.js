@@ -928,7 +928,7 @@ function initCakeScene() {
     
     let cakeState = 'UNLIT'; // UNLIT | BURNING | BLOWN
     
-    const candlePos = { x: 0.5, y: 0.75 };
+    const candlePos = { x: 0.5, y: 0.55 };
     
     // 等距绘图函数
     function drawDiamond(ctx, x, y, dw, dh, color) {
@@ -1078,15 +1078,27 @@ function initCakeScene() {
         }
     });
     
+    let lightCandleTimer = null;
     function lightCakeCandle() {
-        cakeState = 'BURNING';
-        cakeStatusText.textContent = '蜡烛已点燃！对着屏幕噘嘴吹气 💋';
+        if (lightCandleTimer) return;
+        cakeStatusText.textContent = '🔥';
+        lightCandleTimer = setTimeout(() => {
+            cakeState = 'BURNING';
+            cakeStatusText.textContent = '蜡烛已点燃！对着屏幕噘嘴吹气 💋';
+            lightCandleTimer = null;
+        }, 1000);
     }
     
+    let blowCandleTimer = null;
     function blowOutCakeCandle() {
-        cakeState = 'BLOWN';
-        cakeStatusText.textContent = '生日快乐！🎂';
-        if (btnEnterHeart) btnEnterHeart.classList.add('visible');
+        if (blowCandleTimer) return;
+        cakeStatusText.textContent = '💨';
+        blowCandleTimer = setTimeout(() => {
+            cakeState = 'BLOWN';
+            cakeStatusText.textContent = '生日快乐！🎂';
+            if (btnEnterHeart) btnEnterHeart.classList.add('visible');
+            blowCandleTimer = null;
+        }, 1700);
     }
     
     // 蛋糕场景的摄像头

@@ -383,7 +383,6 @@ body {
     width: 100vw;
     height: 100vh;
     max-width: 800px;
-    max-height: 600px;
 }
 #cake-canvas {
     position: absolute;
@@ -412,7 +411,7 @@ body {
 }
 #btn-enter-heart {
     position: absolute;
-    bottom: 30px;
+    bottom: 60px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;
