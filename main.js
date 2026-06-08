@@ -6,6 +6,24 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js';
 
 // ==========================================
+// 0. 全屏控制（页面加载即生效，覆盖所有界面）
+// ==========================================
+(function initFullscreen() {
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+    if (!btnFullscreen) return;
+    btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
+    document.addEventListener('fullscreenchange', () => {
+        btnFullscreen.textContent = document.fullscreenElement ? '⛶' : '⛶';
+    });
+})();
+
+// ==========================================
 // 1. 核心视觉与场景初始化
 // ==========================================
 const scene = new THREE.Scene();
@@ -1074,23 +1092,7 @@ function startExperience() {
         }, { once: true });
     }
 
-    // 全屏控制
-    const btnFullscreen = document.getElementById('btn-fullscreen');
-    if (btnFullscreen) {
-        btnFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().then(() => {
-                    btnFullscreen.textContent = '⛶';
-                }).catch(() => {});
-            } else {
-                document.exitFullscreen();
-                btnFullscreen.textContent = '⛶';
-            }
-        });
-        document.addEventListener('fullscreenchange', () => {
-            btnFullscreen.textContent = document.fullscreenElement ? '⛶' : '⛶';
-        });
-    }
+
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
