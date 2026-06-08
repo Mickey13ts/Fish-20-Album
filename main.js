@@ -273,6 +273,10 @@ const photos = [];
 const totalPhotos = 34; 
 let currentState = 'HEART'; // 'HEART', 'EXPLODED', 'GALLERY'
 let currentGalleryIndex = 0; 
+let isPhoto20Locked = localStorage.getItem('photo20_unlocked') !== 'true'; // 第20张照片默认锁定，需手势解锁
+let isPhoto7Locked = localStorage.getItem('photo7_unlocked') !== 'true';   // 第7张照片默认锁定，需双手比心解锁
+let photo20LockHintTimer = null; // 10秒后切换提示词的定时器
+let photo7LockHintTimer = null;
 
 const photoUrls = Array.from({ length: totalPhotos }, (_, i) => `textures/photo${i + 1}.jpg`);
 
@@ -282,6 +286,17 @@ function getDaysTogether() {
     const now = new Date();
     const diff = now.getTime() - ANNIVERSARY_DATE.getTime();
     return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+}
+// 对象生日：2006年7月1日
+const PARTNER_BIRTHDAY = new Date('2006-07-01');
+function getPartnerAge() {
+    const now = new Date();
+    let age = now.getFullYear() - PARTNER_BIRTHDAY.getFullYear();
+    const m = now.getMonth() - PARTNER_BIRTHDAY.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < PARTNER_BIRTHDAY.getDate())) {
+        age--;
+    }
+    return age;
 }
 
 // 照片备注配置：每张照片的简短描述（按索引对应）
@@ -471,7 +486,7 @@ function triggerExplosion() {
 const videoElement = document.getElementById('input_video');
 const cameraPreview = document.getElementById('camera-preview');
 const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
 // 浏览模式下单手挥动切换的防抖
 let gallerySwipeCooldown = false;
@@ -479,9 +494,101 @@ let lastSwipeHandX = null;
 let swipeAccumulator = 0; // 累积挥动距离
 
 hands.onResults((results) => {
-    // 浏览回忆模式：单手挥动切换照片
+    // ===== 彩蛋解锁：照片20（索引19）前置摄像头镜像，MediaPipe标签与真实左右相反 =====
+    // MediaPipe'Left' = 你的真实右手（画面右侧）→ 握👊
+    // MediaPipe'Right' = 你的真实左手（画面左侧）→ 比✌️
+    if (currentState === 'GALLERY' && currentGalleryIndex === 19 && isPhoto20Locked) {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length >= 2 && results.multiHandedness) {
+            let mpLeftLM = null, mpRightLM = null;  // MP = MediaPipe label
+            
+            for (const h of results.multiHandedness) {
+                if (h.label === 'Left') {
+                    mpLeftLM = results.multiHandLandmarks[h.index];
+                } else if (h.label === 'Right') {
+                    mpRightLM = results.multiHandLandmarks[h.index];
+                }
+            }
+            
+            if (mpLeftLM && mpRightLM) {
+                // MediaPipe'Left'（你的真实右手）：检测"握拳"
+                const rWrist = mpLeftLM[0];
+                let rTotalDist = 0;
+                [8, 12, 16, 20].forEach(tip => {
+                    const dx = mpLeftLM[tip].x - rWrist.x;
+                    const dy = mpLeftLM[tip].y - rWrist.y;
+                    rTotalDist += Math.sqrt(dx*dx + dy*dy);
+                });
+                const rightFist = (rTotalDist / 4) < 0.12;
+                
+                // MediaPipe'Right'（你的真实左手）：检测"比✌️"
+                const lIndexExtended = mpRightLM[8].y < mpRightLM[6].y;
+                const lMiddleExtended = mpRightLM[12].y < mpRightLM[10].y;
+                const lRingCurled = mpRightLM[16].y > mpRightLM[14].y;
+                const lPinkyCurled = mpRightLM[20].y > mpRightLM[18].y;
+                const leftTwoFingers = lIndexExtended && lMiddleExtended && lRingCurled && lPinkyCurled;
+                
+                if (leftTwoFingers && rightFist) {
+                    // 解锁！
+                    clearTimeout(photo20LockHintTimer);
+                    isPhoto20Locked = false;
+                    localStorage.setItem('photo20_unlocked', 'true');
+                    const lockOverlay = document.getElementById('photo-lock-overlay');
+                    if (lockOverlay) {
+                        lockOverlay.classList.add('unlocked');
+                        lockOverlay.classList.remove('show');
+                    }
+                    updatePhotoCaption();
+                }
+            }
+        }
+    }
+
+    // ===== 彩蛋解锁：照片7（索引6）双手比心 ❤️ =====
+    if (currentState === 'GALLERY' && currentGalleryIndex === 6 && isPhoto7Locked) {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length >= 2) {
+            const h1 = results.multiHandLandmarks[0];
+            const h2 = results.multiHandLandmarks[1];
+
+            // 每只手比半个心: 拇指伸出，其余手指弯曲（支持两种比心姿势）
+            function isHeartHalf(lm) {
+                const margin = 0.03;
+                const thumbUp = lm[4].y < lm[3].y + margin;        // 拇指伸出（心形底部）
+                const indexCurl = lm[8].y > lm[6].y - margin;      // 食指弯曲（心形顶部）
+                const middleCurl = lm[12].y > lm[10].y - margin;   // 中指弯曲
+                const ringCurl = lm[16].y > lm[14].y - margin;     // 无名指弯曲
+                const pinkyCurl = lm[20].y > lm[18].y - margin;    // 小指弯曲
+                const curledTotal = (indexCurl ? 1 : 0) + (middleCurl ? 1 : 0) + (ringCurl ? 1 : 0) + (pinkyCurl ? 1 : 0);
+                return thumbUp && curledTotal >= 3;
+            }
+
+            // 两手拇指尖靠拢
+            const thumbDist = Math.sqrt(
+                Math.pow(h1[4].x - h2[4].x, 2) + Math.pow(h1[4].y - h2[4].y, 2)
+            );
+
+            if (isHeartHalf(h1) && isHeartHalf(h2) && thumbDist < 0.4) {
+                // 解锁！
+                clearTimeout(photo7LockHintTimer);
+                isPhoto7Locked = false;
+                localStorage.setItem('photo7_unlocked', 'true');
+                const lockOverlay = document.getElementById('photo-lock-overlay');
+                if (lockOverlay) {
+                    lockOverlay.classList.add('unlocked');
+                    lockOverlay.classList.remove('show');
+                }
+                updatePhotoCaption();
+            }
+        }
+    }
+    
+    // 浏览回忆模式：单手挥动切换照片（双手出现时跳过，避免解锁手势误触翻页）
     if (currentState === 'GALLERY') {
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && !gallerySwipeCooldown) {
+        const isTwoHands = results.multiHandLandmarks && results.multiHandLandmarks.length >= 2;
+        if (isTwoHands) {
+            lastSwipeHandX = null;
+            swipeAccumulator = 0;
+        }
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && !gallerySwipeCooldown && !isTwoHands) {
             const wrist = results.multiHandLandmarks[0][0];
             const handX = wrist.x;
             
@@ -781,17 +888,65 @@ function setSwipeCooldown() {
 
 // 更新照片备注显示
 function updatePhotoCaption() {
+    const lockOverlay = document.getElementById('photo-lock-overlay');
     if (!photoCaption) return;
+
+    // 清理定时器
+    clearTimeout(photo20LockHintTimer);
+    clearTimeout(photo7LockHintTimer);
+
     if (currentState === 'GALLERY') {
-        const caption = photoCaptions[currentGalleryIndex];
-        if (caption) {
-            photoCaption.textContent = caption;
-            photoCaption.classList.remove('hidden');
-        } else {
+        // 照片7：双手比心彩蛋
+        if (currentGalleryIndex === 6 && isPhoto7Locked) {
             photoCaption.classList.add('hidden');
+            if (lockOverlay) {
+                lockOverlay.classList.add('show');
+                const hintPrimary = document.getElementById('lock-hint-primary');
+                const hintSecondary = document.getElementById('lock-hint-secondary');
+                if (hintPrimary) {
+                    hintPrimary.textContent = '双手比心解锁隐藏回忆 ❤️';
+                    hintPrimary.classList.add('visible');
+                }
+                if (hintSecondary) hintSecondary.classList.remove('visible');
+            }
+        }
+        // 照片20：年龄彩蛋
+        else if (currentGalleryIndex === 19 && isPhoto20Locked) {
+            photoCaption.classList.add('hidden');
+            if (lockOverlay) {
+                lockOverlay.classList.add('show');
+                const hintPrimary = document.getElementById('lock-hint-primary');
+                const hintSecondary = document.getElementById('lock-hint-secondary');
+                const age = getPartnerAge();
+                if (hintPrimary) {
+                    hintPrimary.textContent = `我的小鱼今年 ${age} 岁啦！🎂`;
+                    hintPrimary.classList.add('visible');
+                }
+                if (hintSecondary) hintSecondary.classList.remove('visible');
+                // 10秒后显示手势提示
+                photo20LockHintTimer = setTimeout(() => {
+                    if (hintSecondary) hintSecondary.classList.add('visible');
+                }, 10000);
+            }
+        } else {
+            const caption = photoCaptions[currentGalleryIndex];
+            if (caption) {
+                photoCaption.textContent = caption;
+                photoCaption.classList.remove('hidden');
+            } else {
+                photoCaption.classList.add('hidden');
+            }
+            if (lockOverlay) {
+                lockOverlay.classList.remove('show');
+                lockOverlay.classList.remove('unlocked');
+            }
         }
     } else {
         photoCaption.classList.add('hidden');
+        if (lockOverlay) {
+            lockOverlay.classList.remove('show');
+            lockOverlay.classList.remove('unlocked');
+        }
     }
 }
 
@@ -919,6 +1074,24 @@ function startExperience() {
         }, { once: true });
     }
 
+    // 全屏控制
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+    if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    btnFullscreen.textContent = '⛶';
+                }).catch(() => {});
+            } else {
+                document.exitFullscreen();
+                btnFullscreen.textContent = '⛶';
+            }
+        });
+        document.addEventListener('fullscreenchange', () => {
+            btnFullscreen.textContent = document.fullscreenElement ? '⛶' : '⛶';
+        });
+    }
+
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -935,6 +1108,10 @@ const transitionScreen = document.getElementById('transition-screen');
 
 if (introOverlay && btnStart) {
     btnStart.addEventListener('click', () => {
+        // 立即进入全屏
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
         // 0.4s 渐隐至黑屏
         introOverlay.classList.add('fade-out');
         if (transitionScreen) transitionScreen.classList.add('show');
@@ -982,6 +1159,10 @@ function initCakeScene() {
     
     const candlePos = { x: 0.5, y: 0.55 };
     
+    // 彩带粒子系统
+    const confettiParticles = [];
+    let confettiBurst = false;
+    
     // 等距绘图函数
     function drawDiamond(ctx, x, y, dw, dh, color) {
         ctx.fillStyle = color;
@@ -1019,6 +1200,16 @@ function initCakeScene() {
         
         const cx = candlePos.x * canvasW;
         const cy = candlePos.y * canvasH;
+        
+        // 按画布高度等比缩放蛋糕，保持比例不拉伸
+        const baseH = 700;
+        const cakeScale = Math.min(canvasW, canvasH) / baseH;
+        
+        canvasCtx.save();
+        canvasCtx.translate(cx, cy);
+        canvasCtx.scale(cakeScale, cakeScale);
+        canvasCtx.translate(-cx, -cy);
+        
         const w = 120, hIso = 60, h = 90;
         
         // 盘子
@@ -1073,6 +1264,69 @@ function initCakeScene() {
             canvasCtx.ellipse(cx, flameY + flickerY + 4, 6, 10 + flickerY, 0, 0, Math.PI * 2);
             canvasCtx.fill();
         }
+        
+        canvasCtx.restore();
+        
+        // 彩带爆炸（蜡烛熄灭后）
+        if (cakeState === 'BLOWN') {
+            // 首次进入时生成彩带粒子
+            if (!confettiBurst) {
+                confettiBurst = true;
+                const burstX = cx;
+                const burstY = cy - (ch + 22) * cakeScale;
+                const colors = [
+                    '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
+                    '#ff922b', '#f06595', '#20c997', '#845ef7',
+                    '#ff4757', '#2ed573', '#1e90ff', '#ff6348',
+                    '#e91e63', '#ff9800', '#00bcd4', '#cddc39'
+                ];
+                for (let i = 0; i < 180; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const hSpeed = 10 + Math.random() * 28;
+                    const vSpeed = 3 + Math.random() * 12;
+                    confettiParticles.push({
+                        x: burstX + (Math.random() - 0.5) * 20,
+                        y: burstY + (Math.random() - 0.5) * 10,
+                        vx: Math.cos(angle) * hSpeed * 1.5,
+                        vy: Math.sin(angle) * vSpeed - Math.random() * 5,
+                        rotation: Math.random() * Math.PI * 2,
+                        rotSpeed: (Math.random() - 0.5) * 0.4,
+                        w: 8 + Math.random() * 14,
+                        h: 4 + Math.random() * 7,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        gravity: 0.12 + Math.random() * 0.08,
+                        friction: 0.92 + Math.random() * 0.02,
+                        life: 1.0,
+                        decay: 0.012 + Math.random() * 0.006
+                    });
+                }
+            }
+            
+            // 更新并绘制彩带
+            for (let i = confettiParticles.length - 1; i >= 0; i--) {
+                const p = confettiParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += p.gravity;
+                p.vx *= p.friction;
+                p.rotation += p.rotSpeed;
+                p.life -= p.decay;
+                
+                if (p.life <= 0) {
+                    confettiParticles.splice(i, 1);
+                    continue;
+                }
+                
+                const alpha = p.life;
+                canvasCtx.save();
+                canvasCtx.translate(p.x, p.y);
+                canvasCtx.rotate(p.rotation);
+                canvasCtx.globalAlpha = alpha;
+                canvasCtx.fillStyle = p.color;
+                canvasCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                canvasCtx.restore();
+            }
+        }
     }
     
     // MediaPipe Hands - 捏合点火
@@ -1099,10 +1353,11 @@ function initCakeScene() {
                 canvasCtx.arc(pinchX, pinchY, 15, 0, Math.PI * 2);
                 canvasCtx.fill();
                 
+                const hitScale = Math.min(canvasW, canvasH) / 700;
                 const candleWickX = candlePos.x * canvasW;
-                const candleWickY = candlePos.y * canvasH - 57;
+                const candleWickY = candlePos.y * canvasH - 57 * hitScale;
                 const hitDist = Math.sqrt(Math.pow(pinchX - candleWickX, 2) + Math.pow(pinchY - candleWickY, 2));
-                if (hitDist < 40) {
+                if (hitDist < 40 * hitScale) {
                     lightCakeCandle();
                 }
             }
@@ -1149,6 +1404,11 @@ function initCakeScene() {
             cakeState = 'BLOWN';
             cakeStatusText.textContent = '生日快乐！🎂';
             if (btnEnterHeart) btnEnterHeart.classList.add('visible');
+            // 重置照片7和20锁定，下次浏览时需重新解锁
+            isPhoto20Locked = true;
+            localStorage.removeItem('photo20_unlocked');
+            isPhoto7Locked = true;
+            localStorage.removeItem('photo7_unlocked');
             blowCandleTimer = null;
         }, 1700);
     }

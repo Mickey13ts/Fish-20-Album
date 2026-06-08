@@ -68,10 +68,19 @@
 
     <!-- 音乐控制 -->
     <button id="btn-music" class="premium-btn music-btn" title="播放/暂停音乐">♪</button>
+    <button id="btn-fullscreen" class="premium-btn fullscreen-btn" title="全屏">⛶</button>
     <audio id="bg-music" loop preload="auto"></audio>
 
     <!-- 照片备注 -->
     <div id="photo-caption" class="hidden"></div>
+
+    <!-- 照片7/20锁定覆盖层 -->
+    <div id="photo-lock-overlay" class="hidden">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-hint-primary" id="lock-hint-primary"></div>
+        <div class="lock-hint-secondary" id="lock-hint-secondary">左手比「✌️」  右手握「👊」</div>
+        <div class="lock-sub">解锁隐藏回忆</div>
+    </div>
 
     <div id="gallery-ui" class="hidden">
         <button id="btn-prev" class="premium-btn nav-btn">⟵</button>

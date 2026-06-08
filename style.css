@@ -152,6 +152,23 @@ body {
     50% { box-shadow: 0 0 30px rgba(183, 110, 121, 0.7); }
 }
 
+/* 全屏按钮 */
+.fullscreen-btn {
+    position: absolute;
+    top: 30px;
+    right: 84px;
+    z-index: 20;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
 /* 照片备注 */
 #photo-caption {
     position: absolute;
@@ -166,6 +183,69 @@ body {
     text-shadow: 0 0 10px rgba(183, 110, 121, 0.5);
     transition: opacity 0.5s ease;
     pointer-events: none;
+}
+
+/* 照片7锁定覆盖层 */
+#photo-lock-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+#photo-lock-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+#photo-lock-overlay.unlocked {
+    opacity: 0;
+    pointer-events: none;
+}
+.lock-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+    animation: lockPulse 2s ease-in-out infinite;
+}
+@keyframes lockPulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4)); }
+    50% { transform: scale(1.1); filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8)); }
+}
+.lock-hint-primary {
+    font-size: 24px;
+    color: #ffd93d;
+    letter-spacing: 3px;
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 0 0 20px rgba(255, 217, 61, 0.6);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+}
+.lock-hint-primary.visible {
+    opacity: 1;
+}
+.lock-hint-secondary {
+    font-size: 22px;
+    color: #ffd1dc;
+    letter-spacing: 4px;
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 0 0 15px rgba(183, 110, 121, 0.6);
+    opacity: 0;
+    transition: opacity 0.8s ease;
+}
+.lock-hint-secondary.visible {
+    opacity: 1;
+}
+.lock-sub {
+    font-size: 13px;
+    color: rgba(255, 209, 220, 0.6);
+    letter-spacing: 3px;
 }
 
 /* ============ 开场覆盖层 ============ */
@@ -405,7 +485,6 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
-    max-width: 800px;
 }
 #cake-canvas {
     position: absolute;
