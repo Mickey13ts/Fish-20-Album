@@ -710,12 +710,12 @@ function animate() {
                 targetScale = 1.0 - absDiff * 0.1;
             }
 
-            group.position.lerp(targetPos, 0.08);
-            group.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetRot), 0.08);
-            group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.08);
+            group.position.lerp(targetPos, 0.15);
+            group.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetRot), 0.15);
+            group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.15);
             
-            data.frameMat.opacity += (targetOpacity - data.frameMat.opacity) * 0.08;
-            data.photoMat.opacity += (targetOpacity - data.photoMat.opacity) * 0.08;
+            data.frameMat.opacity += (targetOpacity - data.frameMat.opacity) * 0.15;
+            data.photoMat.opacity += (targetOpacity - data.photoMat.opacity) * 0.15;
         }
     });
 
@@ -804,21 +804,6 @@ if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
         updatePhotoCaption();
         // 重置相机到正中心，消除手势偏移
         targetCameraPos.set(0, 0, 35);
-        camera.position.set(0, 0, 35);
-        // 立即将所有照片放到 GALLERY 布局的初始位置
-        photos.forEach(group => {
-            const diff = group.userData.index - currentGalleryIndex;
-            const absDiff = Math.abs(diff);
-            if (diff === 0) {
-                group.position.set(0, 0, 22);
-                group.rotation.set(0, 0, 0);
-                group.scale.set(1.3, 1.3, 1.3);
-            } else {
-                group.position.set(diff * 5, 0, 22 - absDiff * 2);
-                group.rotation.set(0, diff > 0 ? -0.15 : 0.15, 0);
-                group.scale.set(1.0 - absDiff * 0.1, 1.0 - absDiff * 0.1, 1.0 - absDiff * 0.1);
-            }
-        });
         btnEnter.classList.add('hidden');
         galleryUI.classList.remove('hidden');
         // 显示手势提示，5秒后自动淡出
@@ -893,8 +878,10 @@ function startExperience() {
 
     // 纪念日倒计时
     const daysNumber = document.getElementById('days-number');
+    const daysCounter = document.getElementById('days-counter');
     if (daysNumber) {
         daysNumber.textContent = getDaysTogether();
+        if (daysCounter) daysCounter.classList.add('visible');
     }
 
     // 音乐控制
@@ -944,18 +931,25 @@ function startExperience() {
 const introOverlay = document.getElementById('intro-overlay');
 const btnStart = document.getElementById('btn-start');
 const cakeOverlay = document.getElementById('cake-overlay');
+const transitionScreen = document.getElementById('transition-screen');
 
 if (introOverlay && btnStart) {
     btnStart.addEventListener('click', () => {
+        // 0.4s 渐隐至黑屏
         introOverlay.classList.add('fade-out');
-        // 淡出后显示吹蜡烛界面
+        if (transitionScreen) transitionScreen.classList.add('show');
+        
         setTimeout(() => {
             introOverlay.style.display = 'none';
             if (cakeOverlay) {
                 cakeOverlay.classList.add('active');
                 initCakeScene();
             }
-        }, 1000);
+            // 0.5s 渐显至蛋糕界面
+            setTimeout(() => {
+                if (transitionScreen) transitionScreen.classList.remove('show');
+            }, 50);
+        }, 400);
     });
 } else {
     // 如果没有开场元素，直接启动

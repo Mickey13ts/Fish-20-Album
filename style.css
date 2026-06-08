@@ -95,6 +95,11 @@ body {
     z-index: 20;
     text-align: center;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+#days-counter.visible {
+    opacity: 1;
 }
 #days-number {
     display: block;
@@ -172,7 +177,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 1s ease, visibility 1s ease;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 #intro-overlay.fade-out {
     opacity: 0;
@@ -365,18 +370,36 @@ body {
     50% { opacity: 1; }
 }
 
+/* ============ 过渡黑屏 ============ */
+#transition-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+#transition-screen.show {
+    opacity: 1;
+}
+
 /* ============ 吹蜡烛界面 ============ */
 #cake-overlay {
     position: fixed;
     inset: 0;
     z-index: 90;
     background: #111;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
 }
 #cake-overlay.active {
-    display: flex;
+    opacity: 1;
+    pointer-events: auto;
 }
 #cake-container {
     position: relative;
