@@ -364,7 +364,8 @@ function initHeartShape() {
             explodeRot: new THREE.Euler(),
             floatSpeed: Math.random() * 0.02 + 0.01,
             spinSpeed: { x: (Math.random() - 0.5) * 0.01, y: (Math.random() - 0.5) * 0.01 },
-            glowPhase: Math.random() * Math.PI * 2
+            glowPhase: Math.random() * Math.PI * 2,
+            rotPhase: Math.random() * Math.PI * 2  // 旋转摆动相位
         };
 
         group.position.copy(group.userData.heartPos);
@@ -458,10 +459,11 @@ function triggerExplosion() {
         
         // X 水平方向额外拉伸 1.6 倍，让爆炸更开阔
         group.userData.explodePos.set(ex * 2.5, ey * 1.6, ez);
+        // 各轴旋转范围 ±0.5π（±90°），总旋转不超过 180°
         group.userData.explodeRot.set(
-            (Math.random() - 0.5) * Math.PI * 0.6, 
-            (Math.random() - 0.5) * Math.PI * 0.6, 
-            (Math.random() - 0.5) * Math.PI * 0.6
+            (Math.random() - 0.5) * Math.PI * 0.5, 
+            (Math.random() - 0.5) * Math.PI * 0.5, 
+            (Math.random() - 0.5) * Math.PI * 0.5
         );
     });
 }
@@ -536,14 +538,6 @@ const cameraUtils = new Camera(videoElement, {
     onFrame: async () => { await hands.send({image: videoElement}); },
     width: 640, height: 480
 });
-cameraUtils.start().then(() => {
-    const stream = videoElement.srcObject;
-    if (stream && cameraPreview) {
-        cameraPreview.srcObject = stream;
-        // 初始状态 HEART，显示爱心摄像头窗口
-        cameraPreview.parentElement.classList.add('visible');
-    }
-});
 
 // ==========================================
 // 6. 动画物理引擎 (心跳、漂浮与层叠相册)
@@ -584,8 +578,8 @@ function animate() {
     if (currentState === 'GALLERY') {
         camera.position.lerp(new THREE.Vector3(0, 0, 35), 0.1);
     } else {
-        // 爆炸状态下 Z 轴响应更快
-        const lerpSpeed = currentState === 'EXPLODED' ? 0.12 : 0.05;
+        // 提高视差跟随响应速度
+        const lerpSpeed = currentState === 'EXPLODED' ? 0.15 : 0.1;
         camera.position.lerp(targetCameraPos, lerpSpeed);
     }
     camera.lookAt(scene.position);
@@ -636,8 +630,13 @@ function animate() {
             const currentTargetPos = data.explodePos.clone().add(floatOffset);
             
             group.position.lerp(currentTargetPos, 0.08);
-            group.rotation.x += data.spinSpeed.x;
-            group.rotation.y += data.spinSpeed.y;
+            // 正弦波来回旋转，幅度为 explodeRot（±90°），平缓摆动
+            const rotWave = Math.sin(elapsedTime * 0.8 + data.rotPhase);
+            group.rotation.set(
+                data.explodeRot.x * rotWave,
+                data.explodeRot.y * rotWave,
+                data.explodeRot.z * rotWave
+            );
             group.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
 
             data.frameMat.opacity += (1 - data.frameMat.opacity) * 0.1;
@@ -818,6 +817,15 @@ function startExperience() {
     loadPhotosInBatches(photoUrls, 4);
 
     // 手势提示：延迟显示，给场景一点加载时间
+    // 启动主场景摄像头
+    cameraUtils.start().then(() => {
+        const stream = videoElement.srcObject;
+        if (stream && cameraPreview) {
+            cameraPreview.srcObject = stream;
+            cameraPreview.parentElement.classList.add('visible');
+        }
+    });
+
     const gestureHint = document.getElementById('gesture-hint');
     if (gestureHint) {
         setTimeout(() => {
@@ -874,20 +882,240 @@ function startExperience() {
     });
 }
 
-// 开场按钮
+// 开场按钮 → 吹蜡烛界面
 const introOverlay = document.getElementById('intro-overlay');
 const btnStart = document.getElementById('btn-start');
+const cakeOverlay = document.getElementById('cake-overlay');
 
 if (introOverlay && btnStart) {
     btnStart.addEventListener('click', () => {
         introOverlay.classList.add('fade-out');
-        startExperience();
-        // 淡出动画结束后移除 DOM
+        // 淡出后显示吹蜡烛界面
         setTimeout(() => {
             introOverlay.style.display = 'none';
+            if (cakeOverlay) {
+                cakeOverlay.classList.add('active');
+                initCakeScene();
+            }
         }, 1000);
     });
 } else {
     // 如果没有开场元素，直接启动
     startExperience();
+}
+
+// ==========================================
+// 10. 吹蜡烛场景
+// ==========================================
+function initCakeScene() {
+    const cakeCanvas = document.getElementById('cake-canvas');
+    const cakeStatusText = document.getElementById('cake-status-text');
+    const btnEnterHeart = document.getElementById('btn-enter-heart');
+    
+    if (!cakeCanvas || !cakeStatusText) return;
+    
+    const canvasCtx = cakeCanvas.getContext('2d');
+    let canvasW, canvasH;
+    
+    function resizeCakeCanvas() {
+        const container = document.getElementById('cake-container');
+        if (container) {
+            canvasW = cakeCanvas.width = container.clientWidth;
+            canvasH = cakeCanvas.height = container.clientHeight;
+        }
+    }
+    window.addEventListener('resize', resizeCakeCanvas);
+    
+    let cakeState = 'UNLIT'; // UNLIT | BURNING | BLOWN
+    
+    const candlePos = { x: 0.5, y: 0.75 };
+    
+    // 等距绘图函数
+    function drawDiamond(ctx, x, y, dw, dh, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y + dh);
+        ctx.lineTo(x - dw, y);
+        ctx.lineTo(x, y - dh);
+        ctx.lineTo(x + dw, y);
+        ctx.fill();
+    }
+    
+    function drawDrip(ctx, cx, cy, w, hIso, isLeft, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + hIso);
+        const drops = [
+            {x: 0, d: 20}, {x: 20, d: 20}, {x: 20, d: 35},
+            {x: 45, d: 35}, {x: 45, d: 15}, {x: 75, d: 15},
+            {x: 75, d: 30}, {x: 100, d: 30}, {x: 100, d: 10},
+            {x: 120, d: 10}, {x: 120, d: 0}
+        ];
+        for(let p of drops) {
+            let px = isLeft ? cx - p.x : cx + p.x;
+            let baseY = cy + hIso - (p.x * hIso / w);
+            ctx.lineTo(px, baseY + p.d);
+        }
+        ctx.lineTo(isLeft ? cx - w : cx + w, cy);
+        ctx.lineTo(cx, cy + hIso);
+        ctx.fill();
+    }
+    
+    function drawCakeScene() {
+        if (canvasW === undefined) resizeCakeCanvas();
+        canvasCtx.clearRect(0, 0, canvasW, canvasH);
+        
+        const cx = candlePos.x * canvasW;
+        const cy = candlePos.y * canvasH;
+        const w = 120, hIso = 60, h = 90;
+        
+        // 盘子
+        const pW = 150, pIso = 75, pH = 10, pY = cy + h;
+        canvasCtx.fillStyle = '#dcdde1';
+        canvasCtx.beginPath(); canvasCtx.moveTo(cx, pY + pIso); canvasCtx.lineTo(cx - pW, pY); canvasCtx.lineTo(cx - pW, pY + pH); canvasCtx.lineTo(cx, pY + pIso + pH); canvasCtx.fill();
+        canvasCtx.fillStyle = '#bdc3c7';
+        canvasCtx.beginPath(); canvasCtx.moveTo(cx, pY + pIso); canvasCtx.lineTo(cx + pW, pY); canvasCtx.lineTo(cx + pW, pY + pH); canvasCtx.lineTo(cx, pY + pIso + pH); canvasCtx.fill();
+        drawDiamond(canvasCtx, cx, pY, pW, pIso, '#f5f6fa');
+        
+        // 蛋糕本体
+        canvasCtx.fillStyle = '#4a2c16';
+        canvasCtx.beginPath(); canvasCtx.moveTo(cx, cy + hIso); canvasCtx.lineTo(cx - w, cy); canvasCtx.lineTo(cx - w, cy + h); canvasCtx.lineTo(cx, cy + hIso + h); canvasCtx.fill();
+        canvasCtx.fillStyle = '#361e0e';
+        canvasCtx.beginPath(); canvasCtx.moveTo(cx, cy + hIso); canvasCtx.lineTo(cx + w, cy); canvasCtx.lineTo(cx + w, cy + h); canvasCtx.lineTo(cx, cy + hIso + h); canvasCtx.fill();
+        
+        // 糖霜
+        drawDiamond(canvasCtx, cx, cy, w, hIso, '#fdfdfd');
+        drawDrip(canvasCtx, cx, cy, w, hIso, true, '#f1f2f6');
+        drawDrip(canvasCtx, cx, cy, w, hIso, false, '#dfe4ea');
+        
+        // 顶面装饰
+        drawDiamond(canvasCtx, cx - 40, cy + 15, 15, 7.5, '#f5e4c3');
+        drawDiamond(canvasCtx, cx + 50, cy - 20, 20, 10, '#f5e4c3');
+        drawDiamond(canvasCtx, cx, cy - 40, 15, 7.5, '#f5e4c3');
+        drawDiamond(canvasCtx, cx - 25, cy + 30, 12, 6, '#e74c3c');
+        drawDiamond(canvasCtx, cx + 25, cy + 30, 12, 6, '#c0392b');
+        drawDiamond(canvasCtx, cx - 60, cy - 5, 12, 6, '#e74c3c');
+        drawDiamond(canvasCtx, cx + 50, cy + 5, 12, 6, '#c0392b');
+        drawDiamond(canvasCtx, cx + 10, cy - 25, 12, 6, '#c0392b');
+        
+        // 蜡烛
+        const cw = 10, chIso = 5, ch = 45;
+        canvasCtx.fillStyle = '#f39c12';
+        canvasCtx.beginPath(); canvasCtx.moveTo(cx, cy + chIso); canvasCtx.lineTo(cx - cw, cy); canvasCtx.lineTo(cx - cw, cy - ch); canvasCtx.lineTo(cx, cy + chIso - ch); canvasCtx.fill();
+        canvasCtx.fillStyle = '#e67e22';
+        canvasCtx.beginPath(); canvasCtx.moveTo(cx, cy + chIso); canvasCtx.lineTo(cx + cw, cy); canvasCtx.lineTo(cx + cw, cy - ch); canvasCtx.lineTo(cx, cy + chIso - ch); canvasCtx.fill();
+        drawDiamond(canvasCtx, cx, cy - ch, cw, chIso, '#f1c40f');
+        canvasCtx.fillStyle = '#2c3e50';
+        canvasCtx.fillRect(cx - 1.5, cy - ch - 12, 3, 12);
+        
+        // 火焰
+        if (cakeState === 'BURNING') {
+            const flameY = cy - ch - 22;
+            canvasCtx.fillStyle = 'rgba(255, 153, 0, 0.8)';
+            canvasCtx.beginPath();
+            const flickerY = Math.random() * 4;
+            canvasCtx.ellipse(cx, flameY + flickerY, 12, 18 + flickerY, 0, 0, Math.PI * 2);
+            canvasCtx.fill();
+            canvasCtx.fillStyle = 'rgba(255, 255, 102, 0.9)';
+            canvasCtx.beginPath();
+            canvasCtx.ellipse(cx, flameY + flickerY + 4, 6, 10 + flickerY, 0, 0, Math.PI * 2);
+            canvasCtx.fill();
+        }
+    }
+    
+    // MediaPipe Hands - 捏合点火
+    const cakeHands = new Hands({locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+    cakeHands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+    
+    cakeHands.onResults((results) => {
+        if (cakeState !== 'UNLIT') return;
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0];
+            const thumbTip = landmarks[4], indexTip = landmarks[8];
+            const dx = thumbTip.x - indexTip.x;
+            const dy = thumbTip.y - indexTip.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 0.05) {
+                const pinchX = ((thumbTip.x + indexTip.x) / 2) * canvasW;
+                const pinchY = ((thumbTip.y + indexTip.y) / 2) * canvasH;
+                
+                canvasCtx.fillStyle = '#ff4757';
+                canvasCtx.beginPath();
+                canvasCtx.arc(pinchX, pinchY, 15, 0, Math.PI * 2);
+                canvasCtx.fill();
+                
+                const candleWickX = candlePos.x * canvasW;
+                const candleWickY = candlePos.y * canvasH - 57;
+                const hitDist = Math.sqrt(Math.pow(pinchX - candleWickX, 2) + Math.pow(pinchY - candleWickY, 2));
+                if (hitDist < 40) {
+                    lightCakeCandle();
+                }
+            }
+        }
+    });
+    
+    // MediaPipe FaceMesh - 噘嘴吹气
+    const cakeFaceMesh = new FaceMesh({locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+    }});
+    cakeFaceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+    
+    cakeFaceMesh.onResults((results) => {
+        if (cakeState !== 'BURNING') return;
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const landmarks = results.multiFaceLandmarks[0];
+            const leftCorner = landmarks[78], rightCorner = landmarks[308];
+            const upperLip = landmarks[13], lowerLip = landmarks[14];
+            const mouthWidth = Math.sqrt(Math.pow(leftCorner.x - rightCorner.x, 2) + Math.pow(leftCorner.y - rightCorner.y, 2));
+            const mouthHeight = Math.sqrt(Math.pow(upperLip.x - lowerLip.x, 2) + Math.pow(upperLip.y - lowerLip.y, 2));
+            
+            if (mouthWidth < 0.08 && mouthHeight > 0.02 && mouthHeight < 0.06) {
+                blowOutCakeCandle();
+            }
+        }
+    });
+    
+    function lightCakeCandle() {
+        cakeState = 'BURNING';
+        cakeStatusText.textContent = '蜡烛已点燃！对着屏幕噘嘴吹气 💋';
+    }
+    
+    function blowOutCakeCandle() {
+        cakeState = 'BLOWN';
+        cakeStatusText.textContent = '生日快乐！🎂';
+        if (btnEnterHeart) btnEnterHeart.classList.add('visible');
+    }
+    
+    // 蛋糕场景的摄像头
+    const cakeCamera = new Camera(document.getElementById('input_video'), {
+        onFrame: async () => {
+            if (canvasW === undefined) resizeCakeCanvas();
+            drawCakeScene();
+            await cakeHands.send({image: document.getElementById('input_video')});
+            await cakeFaceMesh.send({image: document.getElementById('input_video')});
+        },
+        width: 1280, height: 720
+    });
+    
+    cakeCamera.start().then(() => {
+        cakeStatusText.textContent = '捏合手指，把红点移到蜡烛上点火 🕯️';
+    }).catch((err) => {
+        cakeStatusText.textContent = '无法访问摄像头，请检查权限';
+        console.error(err);
+    });
+    
+    // 进入爱心界面按钮
+    if (btnEnterHeart) {
+        btnEnterHeart.addEventListener('click', () => {
+            // 停止吹蜡烛场景的摄像头和渲染
+            cakeCamera.stop();
+            // 隐藏蛋糕界面
+            cakeOverlay.classList.remove('active');
+            // 启动爱心界面
+            startExperience();
+        });
+    }
 }

@@ -112,6 +112,14 @@ body {
     letter-spacing: 6px;
     margin-top: 4px;
 }
+#days-subtitle {
+    display: block;
+    font-size: 11px;
+    color: rgba(255, 209, 220, 0.45);
+    letter-spacing: 2px;
+    margin-top: 6px;
+    font-style: italic;
+}
 
 /* 音乐按钮 */
 .music-btn {
@@ -355,6 +363,66 @@ body {
 @keyframes hintPulse {
     0%, 100% { opacity: 0.7; }
     50% { opacity: 1; }
+}
+
+/* ============ 吹蜡烛界面 ============ */
+#cake-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: #111;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+#cake-overlay.active {
+    display: flex;
+}
+#cake-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    max-width: 800px;
+    max-height: 600px;
+}
+#cake-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+}
+#cake-ui-layer {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    z-index: 20;
+    pointer-events: none;
+}
+#cake-status-text {
+    color: #ffd1dc;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    font-family: 'Helvetica Neue', sans-serif;
+    font-weight: 300;
+}
+#btn-enter-heart {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: none;
+    padding: 14px 36px;
+    font-size: 13px;
+    letter-spacing: 3px;
+}
+#btn-enter-heart.visible {
+    display: block;
 }
 
 /* 握拳收回提示 */

@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
     <script type="importmap">
         {
@@ -26,9 +27,20 @@
         <div class="intro-stars"></div>
         <div class="intro-content">
             <div class="intro-subtitle">✨ FOR MY LOVE ✨</div>
-            <div class="intro-title">我们的<br>回忆相册</div>
+            <div class="intro-title">🐟<br>回忆相册</div>
             <div class="intro-divider"></div>
             <button id="btn-start" class="premium-btn intro-btn">准备好了，打开礼物</button>
+        </div>
+    </div>
+
+    <!-- 吹蜡烛界面 -->
+    <div id="cake-overlay">
+        <div id="cake-container">
+            <canvas id="cake-canvas"></canvas>
+            <div id="cake-ui-layer">
+                <h2 id="cake-status-text">正在加载...</h2>
+            </div>
+            <button id="btn-enter-heart" class="premium-btn">进入回忆</button>
         </div>
     </div>
 
@@ -48,6 +60,7 @@
     <div id="days-counter">
         <span id="days-number">0</span>
         <span id="days-label">DAYS</span>
+        <span id="days-subtitle">双子星的运行周期</span>
     </div>
 
     <!-- 音乐控制 -->
