@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js';
+
+
+
+
 
 // ==========================================
 // 0. 全屏控制（页面加载即生效，覆盖所有界面）
@@ -56,11 +58,7 @@ const bloomPass = new UnrealBloomPass(
 );
 composer.addPass(bloomPass);
 
-// 轻微 RGB 偏移，增添梦幻感
-const rgbShiftPass = new ShaderPass(RGBShiftShader);
-rgbShiftPass.uniforms['amount'].value = 0.0015;
-composer.addPass(rgbShiftPass);
-rgbShiftPass.renderToScreen = true;
+// RGB 偏移已移除 — 会造成照片内红绿蓝色散条纹，影响清晰度
 
 // ==========================================
 // 2. 氛围特效：核心光效与灯光
@@ -389,6 +387,7 @@ function initHeartShape() {
         group.userData = {
             index: i,
             photoMesh: photo,
+            frameMesh: frame,
             frameMat: frameMat,
             photoMat: photoMat,
             isLoaded: false,
@@ -892,34 +891,134 @@ function animate() {
 const textureLoader = new THREE.TextureLoader();
 let loadedCount = 0;
 
+// 加载画面 Canvas 粒子动画
+let loadingParticles = null;
+function initLoadingCanvas() {
+    const canvas = document.getElementById('loading-canvas');
+    if (!canvas) return;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+    const count = 80;
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 1.5 + 0.5,
+            dx: (Math.random() - 0.5) * 0.4,
+            dy: (Math.random() - 0.5) * 0.4,
+            opacity: Math.random() * 0.6 + 0.2
+        });
+    }
+    function draw() {
+        if (!document.getElementById('loading-overlay') || document.getElementById('loading-overlay').style.opacity === '0') {
+            loadingParticles = null;
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (const p of particles) {
+            p.x += p.dx;
+            p.y += p.dy;
+            if (p.x < 0) p.x = canvas.width;
+            if (p.x > canvas.width) p.x = 0;
+            if (p.y < 0) p.y = canvas.height;
+            if (p.y > canvas.height) p.y = 0;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,182,193,${p.opacity})`;
+            ctx.fill();
+        }
+        // 连线
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 100) {
+                    ctx.beginPath();
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.strokeStyle = `rgba(183,110,121,${0.08 * (1 - dist / 100)})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            }
+        }
+        loadingParticles = requestAnimationFrame(draw);
+    }
+    loadingParticles = requestAnimationFrame(draw);
+    window.addEventListener('resize', () => {
+        if (loadingParticles) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+    });
+}
+
 async function loadPhotosInBatches(urls, batchSize = 4) {
+    initLoadingCanvas();
     for (let i = 0; i < urls.length; i += batchSize) {
         const batch = urls.slice(i, i + batchSize);
         await Promise.all(batch.map((url, index) => loadSingleTexture(url, i + index)));
     }
+    // 加载完成后短暂停驻再淡出
     setTimeout(() => {
         const overlay = document.getElementById('loading-overlay');
-        if(overlay) {
-            overlay.style.opacity = 0;
-            overlay.style.transition = 'opacity 1s ease';
+        const percent = document.getElementById('loading-percent');
+        if (percent) percent.textContent = '100%';
+        if (overlay) {
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+            overlay.style.transition = 'opacity 0.8s ease';
         }
-    }, 1000);
+        cancelAnimationFrame(loadingParticles);
+        loadingParticles = null;
+    }, 600);
 }
 
 function loadSingleTexture(url, index) {
     return new Promise((resolve) => {
         textureLoader.load(url, (texture) => {
-            texture.colorSpace = THREE.SRGBColorSpace; 
-            const targetMesh = photos[index].userData.photoMesh;
+            texture.colorSpace = THREE.SRGBColorSpace;
+            const userData = photos[index].userData;
+            const targetMesh = userData.photoMesh;
             targetMesh.material.map = texture;
             targetMesh.material.needsUpdate = true;
             photos[index].userData.isLoaded = true;
             loadedCount++;
-            
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
-            if(progressBar) progressBar.style.width = `${(loadedCount / totalPhotos) * 100}%`;
-            if(progressText) progressText.innerText = `${loadedCount}/${totalPhotos}`;
+
+            // 按照片原比例调整几何体尺寸
+            const img = texture.image;
+            if (img && img.naturalWidth && img.naturalHeight) {
+                const imgAspect = img.naturalWidth / img.naturalHeight;
+                const maxW = 4.0, maxH = 3.0;
+                const border = 0.2;
+                let pw, ph;
+                if (imgAspect >= maxW / maxH) {
+                    // 宽图：宽度撑满
+                    pw = maxW;
+                    ph = maxW / imgAspect;
+                } else {
+                    // 高图：高度撑满
+                    ph = maxH;
+                    pw = maxH * imgAspect;
+                }
+                targetMesh.geometry.dispose();
+                targetMesh.geometry = new THREE.PlaneGeometry(pw, ph);
+                userData.frameMesh.geometry.dispose();
+                userData.frameMesh.geometry = new THREE.PlaneGeometry(pw + border * 2, ph + border * 2);
+            }
+
+            const pct = Math.round((loadedCount / totalPhotos) * 100);
+            const ringFill = document.getElementById('loading-ring-fill');
+            const percentEl = document.getElementById('loading-percent');
+            if (ringFill) {
+                const circumference = 2 * Math.PI * 44; // ~276.46
+                const offset = circumference - (pct / 100) * circumference;
+                ringFill.style.strokeDashoffset = offset;
+            }
+            if (percentEl) percentEl.textContent = `${pct}%`;
             resolve();
         }, undefined, () => resolve()); 
     });

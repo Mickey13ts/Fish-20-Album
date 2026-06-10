@@ -48,9 +48,31 @@
     </div>
 
     <div id="loading-overlay">
-        <div class="loading-text">RECOVERING MEMORIES <span id="progress-text">0/34</span></div>
-        <div class="progress-bar-container">
-            <div id="progress-bar"></div>
+        <canvas id="loading-canvas"></canvas>
+        <div class="loading-center">
+            <div class="loading-ring">
+                <svg viewBox="0 0 100 100">
+                    <defs>
+                        <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#ffb6c1" />
+                            <stop offset="50%" stop-color="#ff6b8a" />
+                            <stop offset="100%" stop-color="#b76e79" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="ring-bg" cx="50" cy="50" r="44" />
+                    <circle class="ring-fill" cx="50" cy="50" r="44" id="loading-ring-fill" />
+                </svg>
+            </div>
+            <div class="loading-heart">💗</div>
+            <div class="loading-percent" id="loading-percent">0%</div>
+            <div class="loading-subtitle">唤醒回忆中…</div>
+            <div class="loading-carousel">
+                <span>金风玉露一相逢，便胜却人间无数 ✨</span>
+                <span>和烤鱼一起走过的日子 🌸</span>
+                <span>我以海神波塞冬的名义，赐予你爱与被爱的权利 💌</span>
+                <span>两个灵魂的化合产物充当了恋式反应的催化剂 💞</span>
+                <span>鼠鼠爱鱼，无限接近于永远 🩷</span>
+            </div>
         </div>
     </div>
 
