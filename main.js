@@ -293,8 +293,10 @@ let currentState = 'HEART'; // 'HEART', 'EXPLODED', 'GALLERY'
 let currentGalleryIndex = 0; 
 let isPhoto20Locked = localStorage.getItem('photo20_unlocked') !== 'true'; // 第20张照片默认锁定，需手势解锁
 let isPhoto7Locked = localStorage.getItem('photo7_unlocked') !== 'true';   // 第7张照片默认锁定，需双手比心解锁
+let isPhoto34Locked = localStorage.getItem('photo34_unlocked') !== 'true'; // 第34张照片默认锁定，需双手圆圈放在眼睛上解锁
 let photo20LockHintTimer = null; // 10秒后切换提示词的定时器
 let photo7LockHintTimer = null;
+let photo34LockHintTimer = null;
 
 const photoUrls = Array.from({ length: totalPhotos }, (_, i) => `textures/photo${i + 1}.jpg`);
 
@@ -599,6 +601,43 @@ hands.onResults((results) => {
         }
     }
     
+    // ===== 彩蛋解锁：照片34（索引33）双手 OK 圆圈放在眼睛上 👀 =====
+    if (currentState === 'GALLERY' && currentGalleryIndex === 33 && isPhoto34Locked) {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length >= 2) {
+            const h1 = results.multiHandLandmarks[0];
+            const h2 = results.multiHandLandmarks[1];
+
+            // 检测一只手是否做出圆圈（四指指尖聚拢靠近拇指尖）
+            function isOKCircle(lm) {
+                const thumb = lm[4];
+                let closeCount = 0;
+                [8, 12, 16, 20].forEach(tip => {
+                    const dx = lm[tip].x - thumb.x;
+                    const dy = lm[tip].y - thumb.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < 0.16) closeCount++;
+                });
+                return closeCount >= 2;
+            }
+
+            // 检查双手是否都在屏幕上部分（眼睛区域）
+            const h1Y = (h1[0].y + h1[9].y) / 2;
+            const h2Y = (h2[0].y + h2[9].y) / 2;
+            const nearEyes = h1Y < 0.55 && h2Y < 0.55;
+
+            if (isOKCircle(h1) && isOKCircle(h2) && nearEyes) {
+                clearTimeout(photo34LockHintTimer);
+                isPhoto34Locked = false;
+                localStorage.setItem('photo34_unlocked', 'true');
+                const lockOverlay = document.getElementById('photo-lock-overlay');
+                if (lockOverlay) {
+                    lockOverlay.classList.add('unlocked');
+                    lockOverlay.classList.remove('show');
+                }
+                updatePhotoCaption();
+            }
+        }
+    }
+
     // 浏览回忆模式：单手挥动切换照片（双手出现时跳过，避免解锁手势误触翻页）
     if (currentState === 'GALLERY') {
         const isTwoHands = results.multiHandLandmarks && results.multiHandLandmarks.length >= 2;
@@ -912,6 +951,7 @@ function updatePhotoCaption() {
     // 清理定时器
     clearTimeout(photo20LockHintTimer);
     clearTimeout(photo7LockHintTimer);
+    clearTimeout(photo34LockHintTimer);
 
     if (currentState === 'GALLERY') {
         // 照片7：双手比心彩蛋
@@ -945,6 +985,23 @@ function updatePhotoCaption() {
                 photo20LockHintTimer = setTimeout(() => {
                     if (hintSecondary) hintSecondary.classList.add('visible');
                 }, 10000);
+            }
+        }
+        // 照片34：双手OK圆圈放眼睛上 👀
+        else if (currentGalleryIndex === 33 && isPhoto34Locked) {
+            photoCaption.classList.add('hidden');
+            if (lockOverlay) {
+                lockOverlay.classList.add('show');
+                const hintPrimary = document.getElementById('lock-hint-primary');
+                const hintSecondary = document.getElementById('lock-hint-secondary');
+                if (hintPrimary) {
+                    hintPrimary.textContent = '双手比⭕️ 放在眼睛上 👀';
+                    hintPrimary.classList.add('visible');
+                }
+                if (hintSecondary) {
+                    hintSecondary.textContent = '四指与拇指围成圆圈，像望远镜一样看';
+                    hintSecondary.classList.add('visible');
+                }
             }
         } else {
             const caption = photoCaptions[currentGalleryIndex];
@@ -1406,11 +1463,13 @@ function initCakeScene() {
             cakeState = 'BLOWN';
             cakeStatusText.textContent = '生日快乐！🎂';
             if (btnEnterHeart) btnEnterHeart.classList.add('visible');
-            // 重置照片7和20锁定，下次浏览时需重新解锁
+            // 重置照片7、20、34锁定，下次浏览时需重新解锁
             isPhoto20Locked = true;
             localStorage.removeItem('photo20_unlocked');
             isPhoto7Locked = true;
             localStorage.removeItem('photo7_unlocked');
+            isPhoto34Locked = true;
+            localStorage.removeItem('photo34_unlocked');
             blowCandleTimer = null;
         }, 1700);
     }
@@ -1436,7 +1495,7 @@ function initCakeScene() {
     // 进入爱心界面按钮
     if (btnEnterHeart) {
         btnEnterHeart.addEventListener('click', () => {
-            // 停止吹蜡烛场景的摄像头和渲染
+            // 停止蜡烛场景的摄像头和渲染
             cakeCamera.stop();
             // 隐藏蛋糕界面
             cakeOverlay.classList.remove('active');

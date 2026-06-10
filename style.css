@@ -497,7 +497,7 @@ body {
 }
 #cake-ui-layer {
     position: absolute;
-    top: 20px;
+    top: 100px;
     left: 0;
     width: 100%;
     text-align: center;
@@ -506,7 +506,7 @@ body {
 }
 #cake-status-text {
     color: #ffd1dc;
-    font-size: 14px;
+    font-size: 20px;
     letter-spacing: 3px;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     font-family: 'Helvetica Neue', sans-serif;
