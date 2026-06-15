@@ -319,7 +319,7 @@ function getPartnerAge() {
 
 // 照片备注配置：每张照片的简短描述（按索引对应）
 const photoCaptions = {
-    0: '我们的第一张合照',
+    0: '🐭🐟的一周年',
     1: '那天阳光正好',
     2: '你说喜欢这里',
     3: '一起看日落',
@@ -893,6 +893,30 @@ let loadedCount = 0;
 
 // 加载画面 Canvas 粒子动画
 let loadingParticles = null;
+let loadingCarouselTimer = null;
+const loadingMessages = [
+    '金风玉露一相逢，便胜却人间无数 ✨',
+    '和烤鱼一起走过的日子 🌸',
+    '我以海神波塞冬的名义，赐予你爱与被爱的权利 💌',
+    '两个灵魂的化合产物充当了恋式反应的催化剂 💞',
+    '鼠鼠爱鱼，无限接近于永远 🩷'
+];
+function initLoadingCarousel() {
+    const el = document.getElementById('loading-carousel-text');
+    if (!el) return;
+    let idx = 0;
+    el.textContent = loadingMessages[0];
+    loadingCarouselTimer = setInterval(() => {
+        idx = (idx + 1) % loadingMessages.length;
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(6px)';
+        setTimeout(() => {
+            el.textContent = loadingMessages[idx];
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, 600);
+    }, 3500);
+}
 function initLoadingCanvas() {
     const canvas = document.getElementById('loading-canvas');
     if (!canvas) return;
@@ -957,6 +981,7 @@ function initLoadingCanvas() {
 }
 
 async function loadPhotosInBatches(urls, batchSize = 4) {
+    initLoadingCarousel();
     initLoadingCanvas();
     for (let i = 0; i < urls.length; i += batchSize) {
         const batch = urls.slice(i, i + batchSize);
@@ -964,6 +989,8 @@ async function loadPhotosInBatches(urls, batchSize = 4) {
     }
     // 加载完成后短暂停驻再淡出
     setTimeout(() => {
+        clearInterval(loadingCarouselTimer);
+        loadingCarouselTimer = null;
         const overlay = document.getElementById('loading-overlay');
         const percent = document.getElementById('loading-percent');
         if (percent) percent.textContent = '100%';
@@ -1122,6 +1149,16 @@ function updatePhotoCaption() {
             lockOverlay.classList.remove('unlocked');
         }
     }
+
+    // 最后一张照片（索引33）且已解锁 → 显示播放视频按钮
+    const btnPlayVideo = document.getElementById('btn-play-video');
+    if (btnPlayVideo) {
+        if (currentState === 'GALLERY' && currentGalleryIndex === 33 && !isPhoto34Locked) {
+            btnPlayVideo.classList.remove('hidden');
+        } else {
+            btnPlayVideo.classList.add('hidden');
+        }
+    }
 }
 
 if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
@@ -1171,6 +1208,46 @@ if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
         if (currentGalleryIndex > 0) {
             currentGalleryIndex--;
             updatePhotoCaption();
+        }
+    });
+}
+
+// 视频播放按钮与遮罩
+const btnPlayVideo = document.getElementById('btn-play-video');
+const videoOverlay = document.getElementById('video-overlay');
+const memoryVideo = document.getElementById('memory-video');
+const btnCloseVideo = document.getElementById('btn-close-video');
+
+if (btnPlayVideo && videoOverlay && memoryVideo && btnCloseVideo) {
+    btnPlayVideo.addEventListener('click', () => {
+        videoOverlay.classList.remove('hidden');
+        memoryVideo.currentTime = 0;
+        memoryVideo.play().catch(() => {});
+    });
+
+    btnCloseVideo.addEventListener('click', () => {
+        memoryVideo.pause();
+        videoOverlay.classList.add('hidden');
+    });
+
+    // 点击背景关闭
+    videoOverlay.addEventListener('click', (e) => {
+        if (e.target === videoOverlay || e.target.classList.contains('video-backdrop')) {
+            memoryVideo.pause();
+            videoOverlay.classList.add('hidden');
+        }
+    });
+
+    // 视频播完自动关闭
+    memoryVideo.addEventListener('ended', () => {
+        videoOverlay.classList.add('hidden');
+    });
+
+    // 按 Esc 关闭视频
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !videoOverlay.classList.contains('hidden')) {
+            memoryVideo.pause();
+            videoOverlay.classList.add('hidden');
         }
     });
 }

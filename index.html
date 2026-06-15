@@ -27,9 +27,9 @@
         <div class="intro-stars"></div>
         <div class="intro-content">
             <div class="intro-subtitle">✨ FOR MY LOVE ✨</div>
-            <div class="intro-title">🐟<br>回忆相册</div>
+            <div class="intro-title">🐟<br>烤鱼happt碎片</div>
             <div class="intro-divider"></div>
-            <button id="btn-start" class="premium-btn intro-btn">准备好了，打开礼物</button>
+            <button id="btn-start" class="premium-btn intro-btn">鱼已就绪</button>
         </div>
     </div>
 
@@ -65,13 +65,9 @@
             </div>
             <div class="loading-heart">💗</div>
             <div class="loading-percent" id="loading-percent">0%</div>
-            <div class="loading-subtitle">唤醒回忆中…</div>
-            <div class="loading-carousel">
-                <span>金风玉露一相逢，便胜却人间无数 ✨</span>
-                <span>和烤鱼一起走过的日子 🌸</span>
-                <span>我以海神波塞冬的名义，赐予你爱与被爱的权利 💌</span>
-                <span>两个灵魂的化合产物充当了恋式反应的催化剂 💞</span>
-                <span>鼠鼠爱鱼，无限接近于永远 🩷</span>
+            <div class="loading-subtitle">拼凑烤鱼碎片…</div>
+            <div class="loading-carousel" id="loading-carousel">
+                <span id="loading-carousel-text">金风玉露一相逢，便胜却人间无数 ✨</span>
             </div>
         </div>
     </div>
@@ -104,11 +100,23 @@
         <div class="lock-sub">解锁隐藏回忆</div>
     </div>
 
+    <!-- 视频播放遮罩 -->
+    <div id="video-overlay" class="hidden">
+        <div class="video-backdrop"></div>
+        <div class="video-container">
+            <button id="btn-close-video" class="premium-btn video-close-btn">✕</button>
+            <video id="memory-video" controls playsinline>
+                <source src="video.mp4" type="video/mp4">
+            </video>
+        </div>
+    </div>
+
     <div id="gallery-ui" class="hidden">
         <button id="btn-prev" class="premium-btn nav-btn">⟵</button>
         <button id="btn-exit" class="premium-btn">返回爱心</button>
         <button id="btn-next" class="premium-btn nav-btn">⟶</button>
     </div>
+    <button id="btn-play-video" class="premium-btn video-btn hidden">🎬 播放我们的故事</button>
     <div id="gallery-swipe-hint" class="hidden">
         <span class="gesture-icon">👋</span>
         <span class="gesture-text">挥动手掌，切换照片</span>
