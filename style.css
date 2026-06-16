@@ -327,6 +327,20 @@ body {
     color: rgba(255, 209, 220, 0.6);
     letter-spacing: 3px;
 }
+.lock-skip-btn {
+    margin-top: 28px;
+    font-size: 14px;
+    padding: 10px 24px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+}
+.lock-skip-btn.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
 
 /* ============ 开场覆盖层 ============ */
 #intro-overlay {
@@ -654,6 +668,7 @@ body {
 }
 #gallery-swipe-hint.fade-out {
     opacity: 0;
+    animation: none;
     transition: opacity 1s ease;
 }
 
