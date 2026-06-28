@@ -291,12 +291,11 @@ let currentState = 'HEART'; // 'HEART', 'EXPLODED', 'GALLERY'
 let currentGalleryIndex = 0; 
 let isPhoto20Locked = localStorage.getItem('photo20_unlocked') !== 'true'; // 第20张照片默认锁定，需手势解锁
 let isPhoto7Locked = localStorage.getItem('photo7_unlocked') !== 'true';   // 第7张照片默认锁定，需双手比心解锁
-let isPhoto34Locked = localStorage.getItem('photo34_unlocked') !== 'true'; // 第34张照片默认锁定，需双手圆圈放在眼睛上解锁
+let isPhoto34Locked = localStorage.getItem('photo34_unlocked') !== 'true'; // 第34张照片默认锁定，需竖大拇指解锁
 let photo20LockHintTimer = null; // 10秒后切换提示词的定时器
 let photo7LockHintTimer = null;
 let photo34LockHintTimer = null;
 let lockSkipBtnTimer = null; // 20秒后显示跳过按钮
-let gallerySwipeHintTimer = null; // 浏览模式挥手提示淡出定时器
 
 const photoUrls = Array.from({ length: totalPhotos }, (_, i) => `textures/photo${i + 1}.jpg`);
 
@@ -322,39 +321,39 @@ function getPartnerAge() {
 // 照片备注配置：每张照片的简短描述（按索引对应）
 const photoCaptions = {
     0: '🐭🐟的一周年',
-    1: '那天阳光正好',
-    2: '你说喜欢这里',
-    3: '一起看日落',
-    4: '笑得好开心',
-    5: '陪你走过的路',
-    6: '最爱的那个瞬间',
-    7: '永远不会忘记',
-    8: '你眼里的星星',
-    9: '手牵手去旅行',
-    10: '有你真好',
-    11: '甜甜的回忆',
-    12: '每一个拥抱',
-    13: '温暖如你',
-    14: '心动时刻',
-    15: '一起成长',
-    16: '幸福很简单',
-    17: '你在身边',
-    18: '快乐时光',
-    19: '最美的相遇',
-    20: '余生请多指教',
-    21: '感谢有你',
-    22: '唯一',
-    23: '一起加油',
-    24: '甜蜜日常',
-    25: '陪伴是最长情的告白',
-    26: '爱你哟',
-    27: '珍贵的瞬间',
-    28: '约定好了',
-    29: '小确幸',
-    30: '你的笑容',
-    31: '一直走下去',
-    32: '未来可期',
-    33: '永远爱你'
+    1: '盯鼠',
+    2: '不死鱼入场动画',
+    3: '很能造',
+    4: '鱼毛球',
+    5: '贴贴~',
+    6: '❤',
+    7: '鼠怎么在拍鱼',
+    8: '睡死鱼和好看的江景',
+    9: '“我好帅”',
+    10: 'smokers',
+    11: '穿着狼皮的帅鱼',
+    12: '补药吃掉鼠鼠啊（哭泣）',
+    13: '这个光影好好看',
+    14: '到鼠窝了！',
+    15: '怎么这么帅我靠',
+    16: '哲学家不进餐',
+    17: '偷拍的👀',
+    18: '让鱼看看',
+    19: '已严肃立正',
+    20: '嗯？',
+    21: '酸爽',
+    22: '这个光影有点说法',
+    23: '双枪烤鱼',
+    24: '小粉烤鱼',
+    25: '都跟着鱼摇摆',
+    26: '肖恩也在摇摆',
+    27: '我就要跟贤者玩~',
+    28: '你在运镜什么',
+    29: '说自己头发乱了',
+    30: 'cài',
+    31: '瞪眼鱼',
+    32: '这样才能颗秒',
+    33: 'Happy birthday to me~~'
 };
 
 function initHeartShape() {
@@ -602,32 +601,30 @@ hands.onResults((results) => {
         }
     }
     
-    // ===== 彩蛋解锁：照片34（索引33）双手 OK 圆圈放在眼睛上 👀 =====
+    // ===== 彩蛋解锁：照片34（索引33）竖大拇指 👍 =====
     if (currentState === 'GALLERY' && currentGalleryIndex === 33 && isPhoto34Locked) {
         if (results.multiHandLandmarks && results.multiHandLandmarks.length >= 2) {
             const h1 = results.multiHandLandmarks[0];
             const h2 = results.multiHandLandmarks[1];
 
-            // 检测一只手：四指指尖与拇指尖聚拢围成圆圈（5个指尖聚集在一起）
-            function isOKCircle(lm) {
-                const tips = [lm[4], lm[8], lm[12], lm[16], lm[20]]; // 拇指+食中无小指尖
-                // 计算5个指尖的中心点
-                let cx = 0, cy = 0;
-                tips.forEach(t => { cx += t.x; cy += t.y; });
-                cx /= 5; cy /= 5;
-                // 判断所有指尖都在中心点附近（聚拢成圆圈）
-                let gathered = 0;
-                tips.forEach(t => {
-                    const d = Math.sqrt(Math.pow(t.x - cx, 2) + Math.pow(t.y - cy, 2));
-                    if (d < 0.14) gathered++;
-                });
-                return gathered >= 4; // 至少4个指尖聚拢在一起
+            // 检测一只手：竖大拇指（拇指朝上伸出，其余四指握拳弯曲）
+            function isThumbsUp(lm) {
+                const margin = 0.04;
+                // 拇指竖直朝上：拇指尖明显高于拇指IP关节和MCP关节
+                const thumbUp = lm[4].y < lm[3].y - margin && lm[4].y < lm[2].y - margin;
+                // 其余四指弯曲握拳：指尖低于各自的PIP关节
+                const indexCurl = lm[8].y > lm[6].y - margin;
+                const middleCurl = lm[12].y > lm[10].y - margin;
+                const ringCurl = lm[16].y > lm[14].y - margin;
+                const pinkyCurl = lm[20].y > lm[18].y - margin;
+                const curledTotal = (indexCurl ? 1 : 0) + (middleCurl ? 1 : 0) + (ringCurl ? 1 : 0) + (pinkyCurl ? 1 : 0);
+                return thumbUp && curledTotal >= 3;
             }
 
-            // 检查双手是否都在屏幕上部分（眼睛区域），使用手腕位置更灵敏
-            const nearEyes = h1[0].y < 0.58 && h2[0].y < 0.58;
+            // 手举在上半身区域（胸前/脸前）
+            const handsUp = h1[0].y < 0.65 && h2[0].y < 0.65;
 
-            if (isOKCircle(h1) && isOKCircle(h2) && nearEyes) {
+            if (isThumbsUp(h1) && isThumbsUp(h2) && handsUp) {
                 clearTimeout(photo34LockHintTimer);
                 isPhoto34Locked = false;
                 localStorage.setItem('photo34_unlocked', 'true');
@@ -885,6 +882,25 @@ function animate() {
         }
     });
 
+    // 动图/视频播放控制：仅当前浏览照片播放，其余暂停节能
+    if (currentState === 'GALLERY') {
+        photos.forEach(group => {
+            const video = group.userData.videoElement;
+            if (!video) return;
+            if (group.userData.index === currentGalleryIndex) {
+                if (video.paused) video.play().catch(() => {});
+            } else {
+                if (!video.paused) video.pause();
+            }
+        });
+    } else {
+        // HEART / EXPLODED 模式暂停所有视频
+        photos.forEach(group => {
+            const video = group.userData.videoElement;
+            if (video && !video.paused) video.pause();
+        });
+    }
+
     composer.render();
 }
 
@@ -988,7 +1004,7 @@ async function loadPhotosInBatches(urls, batchSize = 4) {
     initLoadingCanvas();
     for (let i = 0; i < urls.length; i += batchSize) {
         const batch = urls.slice(i, i + batchSize);
-        await Promise.all(batch.map((url, index) => loadSingleTexture(url, i + index)));
+        await Promise.all(batch.map((_url, index) => loadSinglePhoto(i + index)));
     }
     // 加载完成后短暂停驻再淡出
     setTimeout(() => {
@@ -1017,50 +1033,106 @@ async function loadPhotosInBatches(urls, batchSize = 4) {
     }, 600);
 }
 
-function loadSingleTexture(url, index) {
+// 通用的纹理应用函数（视频 & 图片共用）
+function applyPhotoTexture(texture, index, videoElement) {
+    const userData = photos[index].userData;
+    const targetMesh = userData.photoMesh;
+    targetMesh.material.map = texture;
+    targetMesh.material.needsUpdate = true;
+    userData.isLoaded = true;
+    loadedCount++;
+
+    if (videoElement) {
+        userData.videoElement = videoElement;
+        userData.isVideo = true;
+    }
+
+    // 按照片/视频原比例调整几何体尺寸
+    let imgAspect;
+    if (videoElement) {
+        const vw = videoElement.videoWidth;
+        const vh = videoElement.videoHeight;
+        imgAspect = (vw && vh) ? (vw / vh) : (4 / 3);
+    } else if (texture.image && texture.image.naturalWidth && texture.image.naturalHeight) {
+        imgAspect = texture.image.naturalWidth / texture.image.naturalHeight;
+    }
+
+    if (imgAspect) {
+        const maxW = 4.0, maxH = 3.0;
+        const border = 0.2;
+        let pw, ph;
+        if (imgAspect >= maxW / maxH) {
+            pw = maxW;
+            ph = maxW / imgAspect;
+        } else {
+            ph = maxH;
+            pw = maxH * imgAspect;
+        }
+        targetMesh.geometry.dispose();
+        targetMesh.geometry = new THREE.PlaneGeometry(pw, ph);
+        userData.frameMesh.geometry.dispose();
+        userData.frameMesh.geometry = new THREE.PlaneGeometry(pw + border * 2, ph + border * 2);
+    }
+
+    const pct = Math.round((loadedCount / totalPhotos) * 100);
+    const ringFill = document.getElementById('loading-ring-fill');
+    const percentEl = document.getElementById('loading-percent');
+    if (ringFill) {
+        const circumference = 2 * Math.PI * 44;
+        const offset = circumference - (pct / 100) * circumference;
+        ringFill.style.strokeDashoffset = offset;
+    }
+    if (percentEl) percentEl.textContent = `${pct}%`;
+}
+
+// 已尝试过加载视频的索引（无论成功失败），避免重复请求
+const attemptedVideoIndices = new Set();
+
+// 懒加载：只在浏览到某张照片时，后台尝试 .mp4 视频纹理
+function lazyLoadVideo(index) {
+    if (attemptedVideoIndices.has(index)) return;
+    const userData = photos[index]?.userData;
+    if (!userData || userData.videoElement) return; // 已有视频或照片不存在
+    attemptedVideoIndices.add(index);
+
+    const mp4Url = `textures/photo${index + 1}.mp4`;
+    const video = document.createElement('video');
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.crossOrigin = 'anonymous';
+    video.setAttribute('webkit-playsinline', '');
+
+    video.oncanplay = () => {
+        clearTimeout(fallbackTimer);
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.colorSpace = THREE.SRGBColorSpace;
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        userData.photoMesh.material.map = videoTexture;
+        userData.photoMesh.material.needsUpdate = true;
+        userData.videoElement = video;
+        userData.isVideo = true;
+        video.play().catch(() => {});
+    };
+
+    video.onerror = () => { /* mp4 不存在，保留 JPG */ };
+    const fallbackTimer = setTimeout(() => { video.src = ''; }, 3000);
+
+    video.src = mp4Url;
+    video.load();
+}
+
+// 加载单张照片：只用 .jpg，稳定可靠
+function loadSinglePhoto(index) {
     return new Promise((resolve) => {
-        textureLoader.load(url, (texture) => {
+        const jpgUrl = `textures/photo${index + 1}.jpg`;
+        textureLoader.load(jpgUrl, (texture) => {
             texture.colorSpace = THREE.SRGBColorSpace;
-            const userData = photos[index].userData;
-            const targetMesh = userData.photoMesh;
-            targetMesh.material.map = texture;
-            targetMesh.material.needsUpdate = true;
-            photos[index].userData.isLoaded = true;
-            loadedCount++;
-
-            // 按照片原比例调整几何体尺寸
-            const img = texture.image;
-            if (img && img.naturalWidth && img.naturalHeight) {
-                const imgAspect = img.naturalWidth / img.naturalHeight;
-                const maxW = 4.0, maxH = 3.0;
-                const border = 0.2;
-                let pw, ph;
-                if (imgAspect >= maxW / maxH) {
-                    // 宽图：宽度撑满
-                    pw = maxW;
-                    ph = maxW / imgAspect;
-                } else {
-                    // 高图：高度撑满
-                    ph = maxH;
-                    pw = maxH * imgAspect;
-                }
-                targetMesh.geometry.dispose();
-                targetMesh.geometry = new THREE.PlaneGeometry(pw, ph);
-                userData.frameMesh.geometry.dispose();
-                userData.frameMesh.geometry = new THREE.PlaneGeometry(pw + border * 2, ph + border * 2);
-            }
-
-            const pct = Math.round((loadedCount / totalPhotos) * 100);
-            const ringFill = document.getElementById('loading-ring-fill');
-            const percentEl = document.getElementById('loading-percent');
-            if (ringFill) {
-                const circumference = 2 * Math.PI * 44; // ~276.46
-                const offset = circumference - (pct / 100) * circumference;
-                ringFill.style.strokeDashoffset = offset;
-            }
-            if (percentEl) percentEl.textContent = `${pct}%`;
+            applyPhotoTexture(texture, index, null);
             resolve();
-        }, undefined, () => resolve()); 
+        }, undefined, () => resolve());
     });
 }
 
@@ -1092,13 +1164,16 @@ function updatePhotoCaption() {
     clearTimeout(photo7LockHintTimer);
     clearTimeout(photo34LockHintTimer);
     clearTimeout(lockSkipBtnTimer);
-    clearTimeout(gallerySwipeHintTimer);
 
     // 关闭跳过按钮（离开锁定页时重置）
     const btnSkipLock = document.getElementById('btn-skip-lock');
     if (btnSkipLock) btnSkipLock.classList.remove('visible');
 
     if (currentState === 'GALLERY') {
+        // 默认隐藏挥手提示（锁定照片或第5张之后），非锁定且前4张时再显示
+        const swipeHint = document.getElementById('gallery-swipe-hint');
+        if (swipeHint) swipeHint.classList.add('hidden');
+
         // 照片7：双手比心彩蛋
         if (currentGalleryIndex === 6 && isPhoto7Locked) {
             photoCaption.classList.add('hidden');
@@ -1138,7 +1213,7 @@ function updatePhotoCaption() {
                 if (btnSkipLock) btnSkipLock.classList.add('visible');
             }, 20000);
         }
-        // 照片34：双手OK圆圈放眼睛上 👀
+        // 照片34：给烤鱼点赞 👍
         else if (currentGalleryIndex === 33 && isPhoto34Locked) {
             photoCaption.classList.add('hidden');
             if (lockOverlay) {
@@ -1146,11 +1221,11 @@ function updatePhotoCaption() {
                 const hintPrimary = document.getElementById('lock-hint-primary');
                 const hintSecondary = document.getElementById('lock-hint-secondary');
                 if (hintPrimary) {
-                    hintPrimary.textContent = '双手比⭕️ 放在眼睛上 👀';
+                    hintPrimary.textContent = '给烤鱼点赞 👍';
                     hintPrimary.classList.add('visible');
                 }
                 if (hintSecondary) {
-                    hintSecondary.textContent = '四指与拇指围成圆圈，像望远镜一样看';
+                    hintSecondary.textContent = '双手竖大拇指，举到胸前';
                     hintSecondary.classList.add('visible');
                 }
             }
@@ -1169,6 +1244,12 @@ function updatePhotoCaption() {
                 lockOverlay.classList.remove('show');
                 lockOverlay.classList.remove('unlocked');
             }
+            // 前4张照片才显示挥手提示
+            if (swipeHint && currentGalleryIndex < 4) {
+                swipeHint.classList.remove('hidden');
+            }
+            // 懒加载动图（仅浏览到这张照片时才尝试加载 .mp4）
+            lazyLoadVideo(currentGalleryIndex);
         }
     } else {
         photoCaption.classList.add('hidden');
@@ -1200,17 +1281,7 @@ if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
         targetCameraPos.set(0, 0, 35);
         btnEnter.classList.add('hidden');
         galleryUI.classList.remove('hidden');
-        // 进入浏览模式时显示一次手势提示，5秒后淡出
-        if (gallerySwipeHint) {
-            gallerySwipeHint.classList.remove('hidden');
-            gallerySwipeHint.classList.remove('fade-out');
-            clearTimeout(gallerySwipeHintTimer);
-            gallerySwipeHintTimer = setTimeout(() => {
-                if (currentState === 'GALLERY') {
-                    gallerySwipeHint.classList.add('fade-out');
-                }
-            }, 5000);
-        }
+        // 手势提示由 updatePhotoCaption() 统一管理
     });
 
     btnExit.addEventListener('click', () => {
@@ -1220,7 +1291,6 @@ if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
         btnEnter.classList.remove('hidden');
         galleryUI.classList.add('hidden');
         // 隐藏双手手势提示
-        clearTimeout(gallerySwipeHintTimer);
         if (gallerySwipeHint) {
             gallerySwipeHint.classList.add('hidden');
             gallerySwipeHint.classList.remove('fade-out');
