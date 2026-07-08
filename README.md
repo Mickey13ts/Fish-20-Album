@@ -28,8 +28,6 @@
 
 ## 📸 效果展示
 
-*(提示：将项目截图上传到 GitHub 后，将下方的链接替换为你自己的图片链接)*
-
 * **心形排布效果**：`![心形阵列](https://github.com/user-attachments/assets/a9953424-94f5-4815-8ad1-09de8e14c4ed)`
 * **手势交互特效**：`![手势特效](https://github.com/user-attachments/assets/483f7bd7-7f38-497b-8969-1e4c96b4b0c3)`
 
