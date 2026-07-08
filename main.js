@@ -1258,16 +1258,6 @@ function updatePhotoCaption() {
             lockOverlay.classList.remove('unlocked');
         }
     }
-
-    // 最后一张照片（索引33）且已解锁 → 显示播放视频按钮
-    const btnPlayVideo = document.getElementById('btn-play-video');
-    if (btnPlayVideo) {
-        if (currentState === 'GALLERY' && currentGalleryIndex === 33 && !isPhoto34Locked) {
-            btnPlayVideo.classList.remove('hidden');
-        } else {
-            btnPlayVideo.classList.add('hidden');
-        }
-    }
 }
 
 if (btnEnter && galleryUI && btnPrev && btnNext && btnExit) {
@@ -1335,45 +1325,7 @@ if (btnSkipLock) {
     });
 }
 
-// 视频播放按钮与遮罩
-const btnPlayVideo = document.getElementById('btn-play-video');
-const videoOverlay = document.getElementById('video-overlay');
-const memoryVideo = document.getElementById('memory-video');
-const btnCloseVideo = document.getElementById('btn-close-video');
 
-if (btnPlayVideo && videoOverlay && memoryVideo && btnCloseVideo) {
-    btnPlayVideo.addEventListener('click', () => {
-        videoOverlay.classList.remove('hidden');
-        memoryVideo.currentTime = 0;
-        memoryVideo.play().catch(() => {});
-    });
-
-    btnCloseVideo.addEventListener('click', () => {
-        memoryVideo.pause();
-        videoOverlay.classList.add('hidden');
-    });
-
-    // 点击背景关闭
-    videoOverlay.addEventListener('click', (e) => {
-        if (e.target === videoOverlay || e.target.classList.contains('video-backdrop')) {
-            memoryVideo.pause();
-            videoOverlay.classList.add('hidden');
-        }
-    });
-
-    // 视频播完自动关闭
-    memoryVideo.addEventListener('ended', () => {
-        videoOverlay.classList.add('hidden');
-    });
-
-    // 按 Esc 关闭视频
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !videoOverlay.classList.contains('hidden')) {
-            memoryVideo.pause();
-            videoOverlay.classList.add('hidden');
-        }
-    });
-}
 
 // ==========================================
 // 9. 启动与适配
@@ -1510,6 +1462,7 @@ function initCakeScene() {
     let cakeState = 'UNLIT'; // UNLIT | BURNING | BLOWN
     
     const candlePos = { x: 0.5, y: 0.55 };
+    let pinchPos = null; // 当前捏合位置（用于在 drawCakeScene 中绘制红点）
     
     // 彩带粒子系统
     const confettiParticles = [];
@@ -1679,6 +1632,27 @@ function initCakeScene() {
                 canvasCtx.restore();
             }
         }
+        
+        // 捏合红点（在 drawCakeScene 中绘制，确保每帧都会显示不会被清掉）
+        if (pinchPos && cakeState === 'UNLIT') {
+            canvasCtx.fillStyle = '#ff4757';
+            canvasCtx.shadowColor = '#ff4757';
+            canvasCtx.shadowBlur = 20;
+            canvasCtx.beginPath();
+            canvasCtx.arc(pinchPos.x, pinchPos.y, 15, 0, Math.PI * 2);
+            canvasCtx.fill();
+            canvasCtx.shadowBlur = 0;
+            
+            // 碰撞检测：红点是否靠近蜡烛芯
+            const hitScale = Math.min(canvasW, canvasH) / 700;
+            const candleWickX = candlePos.x * canvasW;
+            const candleWickY = candlePos.y * canvasH - 57 * hitScale;
+            const hitDist = Math.sqrt(Math.pow(pinchPos.x - candleWickX, 2) + Math.pow(pinchPos.y - candleWickY, 2));
+            if (hitDist < 40 * hitScale) {
+                lightCakeCandle();
+                pinchPos = null;
+            }
+        }
     }
     
     // MediaPipe Hands - 捏合点火
@@ -1688,7 +1662,7 @@ function initCakeScene() {
     cakeHands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
     
     cakeHands.onResults((results) => {
-        if (cakeState !== 'UNLIT') return;
+        if (cakeState !== 'UNLIT') { pinchPos = null; return; }
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const landmarks = results.multiHandLandmarks[0];
             const thumbTip = landmarks[4], indexTip = landmarks[8];
@@ -1696,23 +1670,27 @@ function initCakeScene() {
             const dy = thumbTip.y - indexTip.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
+            // 确保 canvas 尺寸已初始化
+            if (canvasW === undefined) return;
+            
             if (distance < 0.05) {
                 const pinchX = ((thumbTip.x + indexTip.x) / 2) * canvasW;
                 const pinchY = ((thumbTip.y + indexTip.y) / 2) * canvasH;
+                pinchPos = { x: pinchX, y: pinchY };
                 
+                // 直接画红点（即时反馈，不依赖下一帧的 drawCakeScene）
                 canvasCtx.fillStyle = '#ff4757';
+                canvasCtx.shadowColor = '#ff4757';
+                canvasCtx.shadowBlur = 20;
                 canvasCtx.beginPath();
                 canvasCtx.arc(pinchX, pinchY, 15, 0, Math.PI * 2);
                 canvasCtx.fill();
-                
-                const hitScale = Math.min(canvasW, canvasH) / 700;
-                const candleWickX = candlePos.x * canvasW;
-                const candleWickY = candlePos.y * canvasH - 57 * hitScale;
-                const hitDist = Math.sqrt(Math.pow(pinchX - candleWickX, 2) + Math.pow(pinchY - candleWickY, 2));
-                if (hitDist < 40 * hitScale) {
-                    lightCakeCandle();
-                }
+                canvasCtx.shadowBlur = 0;
+            } else {
+                pinchPos = null;
             }
+        } else {
+            pinchPos = null;
         }
     });
     
