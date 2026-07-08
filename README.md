@@ -1,6 +1,6 @@
 # 💖 3D Anniversary Interactive Album
 
-一个基于 WebGL 和 Three.js 开发的沉浸式 3D 纪念相册。通过引入真实的物理光影与前沿的手势追踪技术，为回忆赋予全新的交互体验。
+Mickey 为 kissfish 搭建的一个基于 WebGL 和 Three.js 开发的沉浸式 3D 纪念相册。
 
 ## ✨ 核心特性
 
@@ -28,8 +28,8 @@
 
 ## 📸 效果展示
 
-* **心形排布效果**：`![心形阵列](https://github.com/user-attachments/assets/a9953424-94f5-4815-8ad1-09de8e14c4ed)`
-* **手势交互特效**：`![手势特效](https://github.com/user-attachments/assets/483f7bd7-7f38-497b-8969-1e4c96b4b0c3)`
+• 心形排布效果： ![心形阵列](https://github.com/user-attachments/assets/a9953424-94f5-4815-8ad1-09de8e14c4ed)
+• 手势交互特效： ![手势特效](https://github.com/user-attachments/assets/483f7bd7-7f38-497b-8969-1e4c96b4b0c3)
 
 ## 💡 开发说明
 
