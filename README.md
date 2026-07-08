@@ -29,7 +29,7 @@ Mickey 为 kissfish 搭建的一个基于 WebGL 和 Three.js 开发的沉浸式 
 ```
 
 2. 进入项目目录：
-```bash
+   ```bash
    cd Fish-20-Album
 
 ```
